@@ -1,0 +1,10 @@
+    CHAPTER I
+
+A perfectly ordinary line that sits comfortably under the limit.
+This particular line has been made deliberately longer than the seventy-two character limit that pptext enforces.
+
+A perfectly ordinary line that sits comfortably under the limit.
+
+This particular line has been made deliberately longer than the seventy-two character limit that pptext enforces. And more still.
+
+A perfectly ordinary line that sits comfortably under the limit.

@@ -1,0 +1,15 @@
+    CHAPTER I
+
+The mark “ was left floating in the middle of this line by itself.
+
+“ A line beginning with a floating open quote and then a space.
+
+The quote sits at the very end of this particular line here “
+
+He turned to her and said.“That is quite enough of it for today.”
+
+The word before“the quote has no space between them at any point.
+
+“Come in,”she said, without troubling to look up from her sewing.
+
+“This paragraph is quoted correctly from beginning to end,” he said.

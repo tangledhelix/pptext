@@ -1,0 +1,14 @@
+    CHAPTER I
+
+He stopped.
+The next line follows immediately with no blank line between them.
+
+This line is quite long enough to escape the short line check here.
+
+    An indented line is exempt.
+    Indented lines are never reported by the short lines check here.
+
+A short line at the end of a paragraph is fine because a blank
+line follows it.
+
+The last paragraph closes here.

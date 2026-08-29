@@ -1,0 +1,9 @@
+    CHAPTER I
+
+He walked slowly  down the lane and did not look behind him once.
+
+    This line is indented and has no interior double space at all.
+
+The second offender  is here, with two spaces in the middle of it.
+
+A single space between every word here means this line is fine.

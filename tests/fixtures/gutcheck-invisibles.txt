@@ -1,0 +1,13 @@
+    CHAPTER I
+
+This line contains a non-breaking space between two words here.
+
+This line contains a soft­hyphen buried in the middle of a word.
+
+This line contains a	tab character between two of its words here.
+
+He gave it to the, horse and thought no more about it afterwards.
+
+The name McTavish appears only once in the whole of this chapter.
+
+A perfectly ordinary line with nothing whatever wrong about it.

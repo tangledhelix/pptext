@@ -1,0 +1,9 @@
+    CHAPTER I
+
+This line ends with a single trailing space. 
+
+This line is entirely free of any trailing whitespace at all.
+
+This one has three trailing spaces after the period.   
+
+Another clean line with nothing wrong at the end of it here.

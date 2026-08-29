@@ -1,0 +1,19 @@
+    CHAPTER I
+
+The line below is a single character line and should be reported.
+
+x
+
+The tag <i>italic</i> was left behind in the plain text file here.
+
+The words Blank Page were left in by the scanning software again.
+
+He used a mixed—-dash sequence in the middle of this line of text.
+
+-A line that starts with a hyphen and then a non-hyphen character.
+
+.A line that starts with a full stop is also reported as suspect.
+
+The ampersand & was left standing alone in this line of the text.
+
+The bracket [x is followed by something other than I, G, M or S.

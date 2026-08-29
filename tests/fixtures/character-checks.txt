@@ -1,0 +1,13 @@
+    CHAPTER I
+
+The clerk copied the figure into his ledger and marked it with a
+§ symbol, which nobody in the office could afterwards explain.
+
+He used the same § symbol again upon the following page, and then
+abandoned it altogether for the remainder of the volume.
+
+A more ordinary line of prose, with commas, periods, and dashes,
+should raise no complaint from the character frequency check.
+
+The letters of the alphabet occur here many times over, and so
+they are far too common to be reported as rare characters.

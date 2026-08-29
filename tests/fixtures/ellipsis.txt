@@ -1,0 +1,18 @@
+    CHAPTER I
+
+“Give... us some pudding,” the child said, holding out his plate.
+
+“Give.. us some pudding,” he said again, rather more loudly now.
+
+“Give ..... us some pudding,” he repeated for the third time here.
+
+A line may not properly end with a trailing ellipsis like this ...
+.The line above ended badly and this one begins with a full stop.
+
+“But the cars. ... they had gone by then,” the old woman told him.
+
+A properly spaced ellipsis ... is not reported by this check here.
+
+... A line beginning with three dots and a space is also allowed.
+
+The sentence trailed away into nothing at all and stopped....
