@@ -5,3 +5,6 @@
 /scanreport.txt
 /report.html
 /runlog.txt
+
+# python bytecode from the test harness
+__pycache__/

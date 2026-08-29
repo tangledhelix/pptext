@@ -17,12 +17,19 @@ be flagged; every other section in the report must come back clean. So a fixture
 that targets one check also proves the other seventeen do not fire on it.
 
 Run with:  make test        (or: python3 tests/run_tests.py)
-Options:   -v  show per-assertion detail
-           -l  list cases without running them
-           -k  run only cases whose name contains the given substring
+Options:   -v        show per-assertion detail
+           -l        list cases without running them
+           -k        run only cases whose name contains the given substring
+           --strict  treat skipped cases as failures (use this in CI)
+
+Under GitHub Actions (detected via GITHUB_ACTIONS) the suite additionally emits
+::error:: annotations for failures, folds the passing lines into a ::group::,
+and writes a markdown result table to $GITHUB_STEP_SUMMARY. Output elsewhere is
+unchanged.
 """
 
 import argparse
+import inspect
 import os
 import re
 import shutil
@@ -104,6 +111,8 @@ CASES = []
 
 def case(name, **kw):
     kw["name"] = name
+    # where in this file the case is defined, so CI annotations can link to it
+    kw["line"] = inspect.currentframe().f_back.f_lineno
     CASES.append(kw)
 
 
@@ -575,6 +584,37 @@ case(
     lacks_sections=["hyphenation and non-hyphenated check"],
     flagged={"hyphenation and spaced pair check": ["'post-office' ❬-❭ 'post office'"]},
 )
+# -s is the supported way to run without aspell, so it is also the fallback CI
+# story if a runner cannot install it -- worth holding to its contract.
+case(
+    "skip-aspell",
+    doc="-s reports the two aspell checks as skipped and runs everything else",
+    fixture="spellcheck.txt",
+    args=["-s"],
+    has_sections=["spellcheck skipped (aspell disabled with -s)",
+                  "edit distance check skipped (aspell disabled with -s)"],
+    has_reports=["TEXT ANALYSIS REPORT", "JEEBIES REPORT"],
+    lacks_reports=["SPELLCHECK SUSPECT WORDS (en)", "EDIT DISTANCE CHECKS"],
+    # the report's own link list must advertise only what actually ran
+    contains=["reports: smartquote scan  text checks  jeebies"],
+)
+case(
+    "skip-aspell-never-invokes-aspell",
+    doc="-s short-circuits aspell entirely: even a bogus -A path is harmless",
+    fixture="spellcheck.txt",
+    # without -s this exact -A is fatal ("Error running aspell", exit 1), so a
+    # clean run here is positive proof that no aspell code path was reached
+    args=["-s", "-A", "/nonexistent/aspell"],
+    has_sections=["spellcheck skipped (aspell disabled with -s)"],
+)
+case(
+    "skip-aspell-with-spellcheck-selected",
+    doc="-t s together with -s says why there is no spellcheck, not nothing",
+    fixture="spellcheck.txt",
+    args=["-t", "s", "-s"],
+    has_sections=["spellcheck skipped (aspell disabled with -s)"],
+    lacks_reports=["SPELLCHECK SUSPECT WORDS (en)"],
+)
 case(
     "output-directory",
     doc="-o places report.html and runlog.txt in the chosen directory",
@@ -604,15 +644,19 @@ def needs_aspell(c):
 
     pptext calls aspell for test selections containing 'a', 's' or 'e', and
     also for 'q': the smart quote scan reaches aspell through its asqual()
-    helper (pptext.go:653) even though main() gates it separately. A missing
-    aspell binary is fatal in all of those, so the selection -- not a
-    hand-applied flag -- decides whether a case can run without aspell.
+    helper even though main() gates it separately. A missing aspell binary is
+    fatal in all of those.
+
+    The -s flag disables every one of those code paths, so a case passing -s
+    needs no aspell regardless of its test selection.
     """
     if c.get("needs_aspell"):
         return True
     if c.get("no_input"):
         return False
     args = c.get("args", [])
+    if "-s" in args:
+        return False
     selection = "a"
     if "-t" in args:
         selection = args[args.index("-t") + 1]
@@ -629,6 +673,90 @@ def check_absent(where, haystack, needles, checks):
     for needle in needles:
         ok = needle not in haystack
         checks.append((ok, "%s omits %r" % (where, needle)))
+
+
+# ---------------------------------------------------------------------------
+# GitHub Actions integration
+#
+# Every helper below is inert unless GITHUB_ACTIONS is set, so output outside CI
+# stays byte-identical to what it was before any of this existed.
+# ---------------------------------------------------------------------------
+
+ON_GHA = os.environ.get("GITHUB_ACTIONS") == "true"
+CASE_FILE = os.path.relpath(os.path.abspath(__file__), ROOT)
+
+
+def gha_data(text):
+    """Escape the message body of a workflow command."""
+    return text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def gha_prop(text):
+    """Escape a workflow command property value (title=, file=, ...).
+
+    Property values need ':' and ',' escaped on top of the body rules -- miss
+    that and GitHub silently truncates the annotation at the first delimiter.
+    """
+    return gha_data(text).replace(":", "%3A").replace(",", "%2C")
+
+
+def gha_group(title):
+    if ON_GHA:
+        print("::group::%s" % title)
+
+
+def gha_endgroup():
+    if ON_GHA:
+        print("::endgroup::")
+
+
+def gha_error(c, bad):
+    """Annotate one failing case, linked to where the case is defined.
+
+    One annotation per case rather than per assertion: GitHub only surfaces
+    about ten per step, and a single case can fail a dozen assertions at once.
+    """
+    if not ON_GHA:
+        return
+    print("::error file=%s,line=%d,title=%s::%s" % (
+        gha_prop(CASE_FILE), c.get("line", 1), gha_prop(c["name"]),
+        gha_data("\n".join(bad))))
+
+
+def gha_summary(results, passed, failed, skipped, strict_fail):
+    """Write a markdown result table to the job summary page."""
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not ON_GHA or not path:
+        return
+
+    def cell(text):
+        return text.replace("|", "\\|")
+
+    icon = {"pass": "\u2705", "fail": "\u274c", "skip": "\u23ed\ufe0f"}
+    out = ["## pptext test suite", "",
+           "| | Case | What it covers |", "|---|---|---|"]
+    for status, name, doc, _ in results:
+        out.append("| %s | `%s` | %s |" % (icon[status], name, cell(doc)))
+
+    tally = "**%d/%d passed**" % (passed, passed + failed)
+    if failed:
+        tally += ", **%d failed**" % failed
+    if skipped:
+        tally += ", %d skipped" % skipped
+    out += ["", tally]
+    if strict_fail:
+        out += ["", "> Failed under `--strict`: %d case(s) were skipped. "
+                    "Is aspell installed on the runner?" % skipped]
+
+    for status, name, _, bad in results:
+        if status != "fail":
+            continue
+        out += ["", "<details><summary><code>%s</code></summary>" % name, ""]
+        out += ["- %s" % cell(d) for d in bad]
+        out += ["", "</details>"]
+
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write("\n".join(out) + "\n")
 
 
 def run_case(c, aspell, outdir):
@@ -759,6 +887,8 @@ def main():
                     help="show every assertion, not just failures")
     ap.add_argument("-l", "--list", action="store_true", help="list cases and exit")
     ap.add_argument("-k", metavar="SUBSTR", help="run only cases matching SUBSTR")
+    ap.add_argument("--strict", action="store_true",
+                    help="treat skipped cases as failures (use this in CI)")
     opts = ap.parse_args()
 
     cases = CASES
@@ -784,11 +914,15 @@ def main():
 
     passed = failed = skipped = 0
     failures = []
+    results = []
 
+    gha_group("case results")
     for c in cases:
         name = c["name"]
+        doc = c.get("doc", "")
         if not aspell and needs_aspell(c):
             print("SKIP  %-34s (aspell not installed)" % name)
+            results.append(("skip", name, doc, []))
             skipped += 1
             continue
         with tempfile.TemporaryDirectory(prefix="pptext-test-") as outdir:
@@ -799,26 +933,41 @@ def main():
         bad = [d for ok, d in checks if not ok]
         if bad:
             failed += 1
-            failures.append((name, bad))
-            print("FAIL  %-34s %s" % (name, c.get("doc", "")))
+            failures.append((c, bad))
+            results.append(("fail", name, doc, bad))
+            print("FAIL  %-34s %s" % (name, doc))
         else:
             passed += 1
-            print("ok    %-34s %s" % (name, c.get("doc", "")))
+            results.append(("pass", name, doc, []))
+            print("ok    %-34s %s" % (name, doc))
         if opts.verbose:
             for ok, desc in checks:
                 print("        %s %s" % ("+" if ok else "-", desc))
+    gha_endgroup()
 
+    # the failure detail and its annotations sit outside the fold, so a red job
+    # shows what broke without anyone having to expand anything
     if failures:
         print("\n%s\nFAILURES\n%s" % ("=" * 70, "=" * 70))
-        for name, bad in failures:
-            print("\n%s:" % name)
+        for c, bad in failures:
+            print("\n%s:" % c["name"])
             for desc in bad:
                 print("  - %s" % desc)
+            gha_error(c, bad)
 
     total = passed + failed
     print("\n%d/%d cases passed%s" % (passed, total,
                                       ", %d skipped" % skipped if skipped else ""))
-    return 1 if failed else 0
+
+    strict_fail = bool(opts.strict and skipped)
+    if strict_fail:
+        msg = ("strict: %d case(s) skipped -- is aspell installed?" % skipped)
+        print(msg, file=sys.stderr)
+        if ON_GHA:
+            print("::error title=skipped cases::%s" % gha_data(msg))
+
+    gha_summary(results, passed, failed, skipped, strict_fail)
+    return 1 if failed or strict_fail else 0
 
 
 if __name__ == "__main__":
