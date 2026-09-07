@@ -6,15 +6,15 @@ pptext has no Go test files and is not built as a package, so this suite drives
 the compiled binary end-to-end: each case runs pptext over a fixture in
 tests/fixtures/ and asserts against the generated report.html.
 
-The report marks every check section with a colour that says whether that check
+The report marks every check section with a color that says whether that check
 found anything:
 
-    <span class='dim'>-----   check found nothing
-    <span class='black'>----- check reported findings
+    <span class='dim'>     --->   check found nothing
+    <span class='black'>   --->   check reported findings
 
 That gives each case two-sided leverage. A case names the sections it expects to
 be flagged; every other section in the report must come back clean. So a fixture
-that targets one check also proves the other seventeen do not fire on it.
+that targets one check also proves all others don't fire on it.
 
 Run with:  make test        (or: python3 tests/run_tests.py)
 Options:   -v        show per-assertion detail
@@ -168,7 +168,7 @@ case(
     doc="interior double spaces reported; leading indent is not",
     fixture="adjacent-spaces.txt",
     flagged={"adjacent spaces check": ["He walked slowly  down", "The second offender  is here"]},
-    absent={"adjacent spaces check": ["This line is indented"]},
+    absent={"adjacent spaces check": ["CHAPTER I", "This line is indented", "A single space  between every word"]},
 )
 case(
     "trailing-spaces",
